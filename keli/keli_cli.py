@@ -32,15 +32,15 @@ def main():
 
     if args["command"] == "list":
         # list available commands
-        for method in [method[0] for method in inspect.getmembers(img_pipe.keli_img(), predicate=inspect.ismethod) if not method[0].startswith("__")]:
+        for method in [method[0] for method in inspect.getmembers(keli.img_pipe.keli_img(), predicate=inspect.ismethod) if not method[0].startswith("__")]:
             print(method.replace("_", "-"))
             #print(inspect.getargspec(getattr(img_pipe.keli_img, method)))
     elif args["key"] is None and args["field"] is None:
         # show command signature
-        print(inspect.getargspec(getattr(img_pipe.keli_img, args["command"].replace("-", "_"))))
+        print(inspect.getargspec(getattr(keli.img_pipe.keli_img, args["command"].replace("-", "_"))))
     else:
         # run command
-        getattr(img_pipe.keli_img(db_host=args["db_host"], db_port=args["db_port"]), args["command"].replace("-", "_"))({"uuid" : args["key"], "key" : args["field"]}, **unknown_args)
+        getattr(keli.img_pipe.keli_img(db_host=args["db_host"], db_port=args["db_port"]), args["command"].replace("-", "_"))({"uuid" : args["key"], "key" : args["field"]}, **unknown_args)
 
 if __name__ == "__main__":
     main()
