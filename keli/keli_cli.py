@@ -7,6 +7,7 @@
 import argparse
 import inspect
 import keli.img_pipe
+import keli.src_pipe
 
 def main():
     parser = argparse.ArgumentParser()
@@ -22,7 +23,7 @@ def main():
     # unkown args assumed to be list of --key value pairs that will be
     # passed as kwargs to function
     unknown_args = dict(zip(unknown_args[:-1:2], unknown_args[1::2]))
-    unknown_args = {k.replace("--","") :v for k, v in unknown_args.items()}
+    unknown_args = {k.replace("--","").replace("-","_") :v for k, v in unknown_args.items()}
     # try to convert values to int
     for k, v in unknown_args.items():
         try:
@@ -32,15 +33,20 @@ def main():
 
     if args["command"] == "list":
         # list available commands
-        for method in [method[0] for method in inspect.getmembers(keli.img_pipe.keli_img(), predicate=inspect.ismethod) if not method[0].startswith("__")]:
-            print(method.replace("_", "-"))
-            #print(inspect.getargspec(getattr(img_pipe.keli_img, method)))
+        for c in [keli.img_pipe.keli_img, keli.src_pipe.keli_src]:
+            for method in [method[0] for method in inspect.getmembers(c(), predicate=inspect.ismethod) if not method[0].startswith("__")]:
+                print(method.replace("_", "-"))
+                #print(inspect.getargspec(getattr(img_pipe.keli_img, method)))
     elif args["key"] is None and args["field"] is None:
         # show command signature
-        print(inspect.getargspec(getattr(keli.img_pipe.keli_img, args["command"].replace("-", "_"))))
+        for c in [keli.img_pipe.keli_img, keli.src_pipe.keli_src]:
+            print(inspect.getargspec(getattr(c, args["command"].replace("-", "_"))))
     else:
         # run command
-        getattr(keli.img_pipe.keli_img(db_host=args["db_host"], db_port=args["db_port"]), args["command"].replace("-", "_"))({"uuid" : args["key"], "key" : args["field"]}, **unknown_args)
-
+        for c in [keli.img_pipe.keli_img, keli.src_pipe.keli_src]:
+            try:
+                getattr(c(db_host=args["db_host"], db_port=args["db_port"]), args["command"].replace("-", "_"))({"uuid" : args["key"], "key" : args["field"]}, **unknown_args)
+            except AttributeError:
+                pass
 if __name__ == "__main__":
     main()
