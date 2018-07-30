@@ -46,22 +46,24 @@ class keli_src(object):
 
     def src_numerate_to(self, context, structured_sequence, start_at=None, end_at=None, step=1, *args):
         # add 1 to be inclusive:
-        end_at += 1
+        if end_at >= 0:
+            end_at += 1
         structured = self.redis_conn.lrange(structured_sequence, 0, -1)
         starting_position = structured.index(context["uuid"])
         if start_at is None:
             starting_value = int(self.redis_conn.hget(context["uuid"], context["key"]))
         else:
             starting_value = int(start_at)
-        if end_at >= starting_value:
+        if end_at > starting_value:
             direction = 1
             to_numerate = structured[starting_position : starting_position + (end_at - starting_value)]
         else:
             direction = -1
+            if end_at < 0:
+                end_at = abs(end_at)
             to_numerate = structured[starting_position - (end_at) : starting_position][::-1]
-
         for source_num, source in enumerate(to_numerate):
             if direction < 1:
                 source_num += 1
-            # print((starting_value + (source_num * direction)), self.redis_conn.hget(source, context["key"]))
+            # print((starting_value + (source_num * direction)), self.redis_conn.hget(source, context["key"]), source)
             self.redis_conn.hset(source, context["key"], (starting_value + (source_num * direction)))
