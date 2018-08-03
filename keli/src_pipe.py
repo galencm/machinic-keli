@@ -18,6 +18,12 @@ class keli_src(object):
         self.binary_r = redis.StrictRedis(host=r_ip, port=r_port)
         self.redis_conn = redis.StrictRedis(host=r_ip, port=r_port, decode_responses=True)
 
+    def src_artifact(self, context, filename, *args):
+        bytes_key = self.redis_conn.hget(context["uuid"], context["key"])
+        artifact_bytes = self.binary_r.get(bytes_key)
+        with open(artifact_filename, "wb+") as file:
+            file.write(artifact_bytes)
+
     def src_numerate_to_zero(self, context, structured_sequence, start_at=None, end_at=None, step=1, *args):
         # accept either list or db key to list for structured_sequence
         # if start_at is None, try to use key/field value and decrement
