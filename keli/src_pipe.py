@@ -5,6 +5,8 @@
 # Copyright (c) 2018, Galen Curwen-McAdams
 
 import redis
+import pathlib
+import os
 from ma_cli import data_models
 
 class keli_src(object):
@@ -18,10 +20,14 @@ class keli_src(object):
         self.binary_r = redis.StrictRedis(host=r_ip, port=r_port)
         self.redis_conn = redis.StrictRedis(host=r_ip, port=r_port, decode_responses=True)
 
-    def src_artifact(self, context, filename, *args):
+    def src_artifact(self, context, filename, path="", *args):
         bytes_key = self.redis_conn.hget(context["uuid"], context["key"])
         artifact_bytes = self.binary_r.get(bytes_key)
-        with open(artifact_filename, "wb+") as file:
+        file_path = pathlib.Path(path, filename).expanduser().absolute()
+        dir_path = pathlib.Path(path).expanduser().absolute()
+        if not dir_path.is_dir():
+            os.mkdir(dir_path)
+        with open(file_path, "wb+") as file:
             file.write(artifact_bytes)
 
     def src_numerate_to_zero(self, context, structured_sequence, start_at=None, end_at=None, step=1, *args):
