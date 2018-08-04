@@ -47,7 +47,7 @@ def write_bytes(hash_uuid, key, write_bytes, key_prefix="", redis_conn=None, bin
     bytes_key_uuid = str(uuid.uuid4())
     bytes_key = "{}{}".format(key_prefix,bytes_key_uuid)
     binary_r.set(bytes_key, write_bytes)
-    redis_conn.hset(hash_uuid,key,bytes_key)
+    redis_conn.hset(hash_uuid, key, bytes_key)
 
 class keli_img(object):
 
@@ -61,7 +61,7 @@ class keli_img(object):
         self.redis_conn = redis.StrictRedis(host=r_ip, port=r_port, decode_responses=True)
 
     #@route_broadcast(channel='{function}',message='context')
-    def img_show(self, context,*args):
+    def img_show(self, context, *args):
         """Display image
 
             Args:
@@ -71,7 +71,7 @@ class keli_img(object):
             Returns:
                 dict
         """
-        with open_image(context['uuid'],context['key'], self.redis_conn, self.binary_r) as img:
+        with open_image(context['uuid'], context['key'], self.redis_conn, self.binary_r) as img:
             img.show()
         return context
 
@@ -90,7 +90,7 @@ class keli_img(object):
         """
         text = str(text)
 
-        with open_image(context['uuid'],context['key']) as img:
+        with open_image(context['uuid'],context['key'], self.redis_conn, self.binary_r) as img:
             draw = ImageDraw.Draw(img)
             try:
                 font = ImageFont.truetype("FreeSerif.ttf", fontsize)
@@ -101,7 +101,7 @@ class keli_img(object):
 
         return context
 
-    def img_rotate(self, context, rotation,*args):
+    def img_rotate(self, context, rotation, *args):
         """Rotate in place
 
             Args:
@@ -154,7 +154,7 @@ class keli_img(object):
         b = int(b)
         a = int(a)
 
-        with open_image(context['uuid'],context['key']) as img:
+        with open_image(context['uuid'],context['key'], self.redis_conn, self.binary_r) as img:
             draw = ImageDraw.Draw(img)
             imgw,imgh = img.size
 
@@ -177,7 +177,7 @@ class keli_img(object):
                         grid_number +=1
         return context
 
-    def img_crop_inplace(self, context, x1, y1, w, h, *args):
+    def img_crop_inplace(self, context, x1, y1, width, height, *args):
         """Crop in place
 
             Args:
@@ -194,22 +194,22 @@ class keli_img(object):
         #left upper right lower
         x1 = float(x1)
         y1 = float(y1)
-        w = float(w)
-        h = float(h)
+        width = float(width)
+        height = float(height)
 
-        with open_image(context['uuid'],context['key']) as img:
+        with open_image(context['uuid'],context['key'], self.redis_conn, self.binary_r) as img:
             if "scale" in args:
-                width, height = img.size
-                x1 *= width
-                y1 *= height
-                w  *= width
-                h  *= height
-            box = (x1,y1,x1+w,y1+h)
+                width_size, height_size = img.size
+                x1 *= width_size
+                y1 *= height_size
+                width  *= width_size
+                height  *= height_size
+            box = (x1,y1,x1+width,y1+height)
             img = img.crop(box)
 
         return context
 
-    def img_crop_to_key(self, context, x1, y1, w, h, to_key, *args):
+    def img_crop_to_key(self, context, x1, y1, width, height, to_key, *args):
         """Crop selection from context to new key
 
             Args:
@@ -224,31 +224,37 @@ class keli_img(object):
             Returns:
                 dict:
         """
+        if not "binary_prefix" in context:
+            context["binary_prefix"] = "binary:"
+
         x1 = float(x1)
         y1 = float(y1)
-        w = float(w)
-        h = float(h)
+        width = float(width)
+        height = float(height)
 
-        with open_image(context['uuid'],context['key']) as img:
+        with open_image(context['uuid'],context['key'], self.redis_conn, self.binary_r) as img:
             if "scale" in args:
-                width, height = img.size
-                x1 *= width
-                y1 *= height
-                w  *= width
-                h  *= height
-            box = (x1,y1,x1+w,y1+h)
+                width_size, height_size = img.size
+                x1 *= width_size
+                y1 *= height_size
+                width  *= width_size
+                height  *= height_size
+            box = (x1, y1, x1 + width, y1 + height)
             region = img.crop(box)
             filelike = io.BytesIO()
-            region.save(filelike,img.format)
+            region.save(filelike, img.format)
             filelike.seek(0)
             write_bytes(context['uuid'],
-                        to_key,filelike.read(),
-                        key_prefix=context['binary_prefix'], redis_conn=self.redis_conn, binary_r=self.binary_r)
+                        to_key,
+                        filelike.read(),
+                        key_prefix=context['binary_prefix'],
+                        redis_conn=self.redis_conn,
+                        binary_r=self.binary_r)
             filelike.close()
 
         return context
 
-    def img_orientation(self, context,*args):
+    def img_orientation(self, context, *args):
         """Calculate text orientation using tesseract
 
             Args:
@@ -259,7 +265,7 @@ class keli_img(object):
                 dict
         """
         with PyTessBaseAPI(psm=PSM.AUTO_OSD) as api:
-            with open_image(context['uuid'],context['key']) as img:
+            with open_image(context['uuid'],context['key'], self.redis_conn, self.binary_r) as img:
                 api.SetImage(img)
                 api.Recognize()
                 it = api.AnalyseLayout()
@@ -287,10 +293,10 @@ class keli_img(object):
         # set PSM (Page Segmentation Mode) to 6 to handle
         # images containing only numerals
         psm = 6
-        with open_image(context['uuid'],context['key']) as img:
+        with open_image(context['uuid'], context['key'], self.redis_conn, self.binary_r) as img:
             logger.info(image_to_text(img, psm=psm))
             # r redis conn basically global
-            self.redis_conn.hset(context['uuid'],to_key,image_to_text(img, psm=psm).strip())
+            self.redis_conn.hset(context['uuid'], to_key, image_to_text(img, psm=psm).strip())
         return context
 
     def img_ocr_key(self, context, key, to_key, *args):
@@ -308,7 +314,7 @@ class keli_img(object):
         # set PSM (Page Segmentation Mode) to 6 to handle
         # images containing only numerals
         psm = 6
-        with open_image(context['uuid'], key) as img:
+        with open_image(context['uuid'], key, self.redis_conn, self.binary_r) as img:
             logger.info(image_to_text(img, psm=psm))
             # r redis conn basically global
             # set PSM (Page Segmentation Mode) to 6 to handle
@@ -318,13 +324,13 @@ class keli_img(object):
 
     def img_ocr_rectangle(self, context, to_key, left, top, width, height, *args):
         with PyTessBaseAPI() as api:
-            with open_image(context['uuid'],context['key']) as img:
+            with open_image(context['uuid'],context['key'], self.redis_conn, self.binary_r) as img:
                 api.SetImage(img)
                 api.SetRectangle(left, top, width, height)
                 result = api.GetUTF8Text()
                 logger.info(result)
-                self.redis_conn.hset(context['uuid'],to_key,result)
-                logger.info("setting {} field {} to {}".format(context['uuid'],to_key,result))
+                self.redis_conn.hset(context['uuid'], to_key, result)
+                logger.info("setting {} field {} to {}".format(context['uuid'], to_key, result))
                 # store rectangle information in separate
                 # key to allow reconstruction of geometry
                 # of the ocr region
@@ -335,7 +341,7 @@ class keli_img(object):
 
     def img_ocr_boxes(self, context, to_key, *args):
         with PyTessBaseAPI() as api:
-            with open_image(context['uuid'],context['key']) as img:
+            with open_image(context['uuid'],context['key'], self.redis_conn, self.binary_r) as img:
                 api.SetImage(img)
                 boxes = api.GetComponentImages(RIL.TEXTLINE, True)
                 for i, (im, box, _, _) in enumerate(boxes):
@@ -343,5 +349,4 @@ class keli_img(object):
                     ocrResult = api.GetUTF8Text()
                     conf = api.MeanTextConf()
                     logger.info("Box[{0}]: x={x}, y={y}, w={w}, h={h}, confidence: {1}, text: {2}".format(i, conf, ocrResult, **box))
-        
         return context
