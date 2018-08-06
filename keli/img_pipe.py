@@ -279,6 +279,23 @@ class keli_img(object):
         #https://github.com/tesseract-ocr/tesseract/wiki/4.0-with-LSTM
         return context
 
+    def img_ocr_fan_in(self, context, to_key, write_empty=False, *args):
+        # For multiple ocr regions written to a single key
+        # write: if ocr result is empty and to_key does not exist
+        # do not write: if ocr result is empty and key exists
+        psm = 6
+        with open_image(context['uuid'], context['key'], self.redis_conn, self.binary_r) as img:
+            logger.info(image_to_text(img, psm=psm))
+            # r redis conn basically global
+            ocr_result = image_to_text(img, psm=psm).strip()
+            print( self.redis_conn.hget(context['uuid'], to_key))
+            if not ocr_result and not write_empty and self.redis_conn.hget(context['uuid'], to_key) is not None:
+                print("passing")
+                pass
+            else:
+                self.redis_conn.hset(context['uuid'], to_key, ocr_result)
+        return context
+
     def img_ocr(self, context, to_key, *args):
         """Optical Character Recognition(OCR) using tesseract
 
