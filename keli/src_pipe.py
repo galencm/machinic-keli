@@ -8,6 +8,7 @@ import redis
 import pathlib
 import os
 from ma_cli import data_models
+from lings import ruling
 
 class keli_src(object):
 
@@ -19,6 +20,13 @@ class keli_src(object):
 
         self.binary_r = redis.StrictRedis(host=r_ip, port=r_port)
         self.redis_conn = redis.StrictRedis(host=r_ip, port=r_port, decode_responses=True)
+
+    def src_ruling_str(self, context, ruling_string, *args):
+        db_item = self.redis_conn.hgetall(context["uuid"])
+        rulings = ruling.rule_offline(ruling_string, glworb_dict=db_item)
+        db_item.update(**rulings)
+        self.redis_conn.hmset(context["uuid"], db_item)
+        return context
 
     def src_artifact(self, context, filename, path="", *args):
         bytes_key = self.redis_conn.hget(context["uuid"], context["key"])
