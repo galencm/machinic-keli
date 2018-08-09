@@ -41,7 +41,11 @@ def main():
     elif args["key"] is None and args["field"] is None:
         # show command signature
         for c in [keli.img_pipe.keli_img, keli.src_pipe.keli_src, keli.neo_pipe.keli_neo]:
-            print(inspect.getargspec(getattr(c, args["command"].replace("-", "_"))))
+            try:
+                print(inspect.getargspec(getattr(c, args["command"].replace("-", "_"))))
+            except AttributeError:
+                pass
+
     else:
         # run command
         for c in [keli.img_pipe.keli_img, keli.src_pipe.keli_src, keli.neo_pipe.keli_neo]:
