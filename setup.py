@@ -11,7 +11,7 @@ name="keli",
     data_files = [("", ["LICENSE.txt"])],
     url="",
     packages=find_packages(),
-    install_requires=['redis', 'ma_cli', 'logzero', 'tesserocr', 'lings'],
+    install_requires=['redis', 'ma_cli', 'logzero', 'tesserocr', 'lings', 'gphoto2'],
     dependency_links=["https://github.com/galencm/ma-cli/tarball/master#egg=ma_cli-0.1",
                       "https://github.com/galencm/machinic-lings/tarball/master#egg=lings-0.1"],
     entry_points = {'console_scripts': ['keli = keli.keli_cli:main'
