@@ -117,7 +117,7 @@ class SlurpGphoto2(object):
         if not "scripts" in device:
             device["scripts"] = self.redis_conn.hget("device:script_lookup", device["name"])
 
-        setting_call = self.redis_conn.hget(device["scripts"], setting).format_map({setting : setting_value})
+        setting_call = self.redis_conn.hget("scripts:"+device["scripts"], setting).format_map({setting : setting_value})
         print(setting_call)
 
         if dry_run is True:
