@@ -95,7 +95,7 @@ class SlurpGphoto2(object):
 
         return slurped
 
-    def set(self, device, setting, setting_value, dry_run=False):
+    def set_setting(self, device, setting, setting_value, dry_run=False):
         # device may have a 'scripts' field:
         #     'scripts' : 'chdkptp:propset_1'
         #                  ( chdkptp:propset_1 or chdkptp:propset:1? )
