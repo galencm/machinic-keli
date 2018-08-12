@@ -136,6 +136,7 @@ class SlurpGphoto2(object):
                                 ])
 
     def slurpd(self, device):
+        contents = b''
         try:
             context = gp.gp_context_new()
             camera = gp.Camera()
