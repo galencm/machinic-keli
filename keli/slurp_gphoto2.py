@@ -52,7 +52,7 @@ class SlurpGphoto2(object):
             print(ex)
         return discoverable
 
-    def slurp(self, device=None, container="glworb"):
+    def slurp(self, device=None, container="glworb", metadata=None):
         if device == '_':
             device = None
 
@@ -61,8 +61,11 @@ class SlurpGphoto2(object):
         else:
             devices = [device]
 
-        slurped = []
+        if metadata is None:
+            metadata = {}
 
+        slurped = []
+        print(devices)
         for device in devices:
             slurped_bytes = self.slurpd(device)
 
@@ -89,6 +92,8 @@ class SlurpGphoto2(object):
                 glworb['slurp_source_name'] =  device['name']
                 glworb['binary_key'] = blob_uuid
                 glworb['created'] = str(datetime.datetime.now())
+                for k, v in metadata.items():
+                    glworb[k] = v
                 glworb_uuid = "glworb:{}".format(glworb['uuid'])
                 self.redis_conn.hmset(glworb_uuid, glworb)
                 slurped.append(glworb_uuid)
