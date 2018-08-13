@@ -115,32 +115,34 @@ class keli_neo(object):
 
     def neo_slurpst(self, context, state_template=None):
         # slurpstate
-        # use context["uuid"] for device uid
+        # use context["uuid"] for device uid using pattern matching
+        # for example "*" will match all devices
         # this is  messy since it expects keli_cli parsing behavior
         slurp_thing = sg.SlurpGphoto2(binary_r=self.binary_r, redis_conn=self.redis_conn)
 
-        device =None
-        devices = slurp_thing.discover()
+        found_devices = slurp_thing.discover()
+        devices = []
         # lookup and get device dict to pass to slurp
-        for d in devices:
-            if d["uid"] == context["uuid"]:
-                device = d
+        for d in found_devices:
+            if fnmatch.fnmatch(d["uid"], context["uuid"]):
+                devices.append(d)
 
-        if state_template is None:
-            state_template = "device:state:{uuid}"
+        for device in devices:
+            if state_template is None:
+                state_template = "device:state:{uid}"
 
-        # get state settings
-        state = self.redis_conn.hgetall(state_template.format_map(context))
+            # get state settings
+            state = self.redis_conn.hgetall(state_template.format_map(device))
 
-        if state:
-            settings = state
-        else:
-            settings = {}
+            if state:
+                settings = state
+            else:
+                settings = {}
 
-        for setting, setting_value in settings.items():
-            slurp_thing.set_setting(device, setting, setting_value)
+            for setting, setting_value in settings.items():
+                slurp_thing.set_setting(device, setting, setting_value)
 
-        print("\n".join(slurp_thing.slurp()))
+            print("\n".join(slurp_thing.slurp()))
 
     def neo_slurp(self, context):
         s = sg.SlurpGphoto2(binary_r=self.binary_r, redis_conn=self.redis_conn)
