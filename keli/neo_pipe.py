@@ -92,6 +92,35 @@ class keli_neo(object):
                         postmodel = keyling.model(post_condition)
                         s_result = keyling.parse_lines(postmodel, s_dict, s, allow_shell_calls=True)
 
+    def neo_slurpst(self, context, state_template=None):
+        # slurpstate
+        # use context["uuid"] for device uid
+        # this is  messy since it expects keli_cli parsing behavior
+        slurp_thing = sg.SlurpGphoto2(binary_r=self.binary_r, redis_conn=self.redis_conn)
+
+        device =None
+        devices = slurp_thing.discover()
+        # lookup and get device dict to pass to slurp
+        for d in devices:
+            if d["uid"] == context["uuid"]:
+                device = d
+
+        if state_template is None:
+            state_template = "device:state:{uuid}"
+
+        # get state settings
+        state = self.redis_conn.hgetall(state_template.format_map(context))
+
+        if state:
+            settings = state
+        else:
+            settings = {}
+
+        for setting, setting_value in settings.items():
+            slurp_thing.set_setting(device, setting, setting_value)
+
+        print("\n".join(slurp_thing.slurp()))
+
     def neo_slurp(self, context):
         s = sg.SlurpGphoto2(binary_r=self.binary_r, redis_conn=self.redis_conn)
         print("\n".join(s.slurp()))
