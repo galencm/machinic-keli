@@ -7,7 +7,10 @@
 import redis
 import pathlib
 import os
+import fnmatch
 from ma_cli import data_models
+import fold_ui.keyling as keyling
+
 # slurp_gphoto2 is an edited version from machinic-image
 # machinic-image also has slurp_webcam and slurp_primitve_generic
 # may make sense to move slurp to a separate package / cli
@@ -45,52 +48,70 @@ class keli_neo(object):
             self.redis_conn.delete(not_referenced)
 
     def neo_slurpif(self, context):
-        import fold_ui.keyling as keyling
+        # use context["uuid"] for device uid using pattern matching
+        # for example "*" will match all devices
+        # this is  messy since it expects keli_cli parsing behavior
         slurp_thing = sg.SlurpGphoto2(binary_r=self.binary_r, redis_conn=self.redis_conn)
         env_var_key = "machinic:env:{}:{}".format(self.db_host, self.db_port)
         env_vars = self.redis_conn.hgetall(env_var_key)
         # conditional keys example
+
+        # to make device-specific add device into key names
+        # and slurp all devices if a name is not present
+        # example:
+        # settings:pre:<name>:<device?>:<host>:<port>
+
+        # keys:
         # settings:pre:foo:127.0.0.1:6379 #list of keyling scripts
         # settings:set:foo:127.0.0.1:6379 #hash of key:values to set
         # settings:post:foo:127.0.0.1:6379 #list of keyling scripts
-        pre_conditions = list(self.redis_conn.scan_iter(match="settings:pre:*:{}:{}".format(self.db_host, self.db_port)))
-        # devices are a list of dictionaries
-        for c in pre_conditions:
-            conditions = self.redis_conn.lrange(c, 0, -1)
-            all_satisfied = []
-            for condition in conditions:
-                model = keyling.model(condition)
-                satisfied = keyling.parse_lines(model, env_vars, env_var_key, allow_shell_calls=True)
-                all_satisfied.append(satisfied)
-            # A None means a condition / keyling script was not satisfied
-            # and did not return a dictionary
-            if not None in all_satisfied:
-                print(all_satisfied)
+        found_devices = slurp_thing.discover()
+        devices = []
+        # lookup and get device dict to pass to slurp
+        for d in found_devices:
+            if fnmatch.fnmatch(d["uid"], context["uuid"]):
+                devices.append(d)
 
-                # settings could be a list of raw strings or a dictionary
-                # or use a raw_ prefix on key to specify raw string to use set_raw()
-                # settings = self.redis_conn.lrange(c.replace("pre", "set"), 0, -1)
-                settings = self.redis_conn.hgetall(c.replace("pre", "set"))
-                devices = slurp_thing.discover()
+        for device in devices:
+            pre_conditions = list(self.redis_conn.scan_iter(match="settings:pre:*:{}:{}:{}".format(device["uid"], self.db_host, self.db_port)))
+            for c in pre_conditions:
+                conditions = self.redis_conn.lrange(c, 0, -1)
+                all_satisfied = []
+                for condition in conditions:
+                    model = keyling.model(condition)
+                    satisfied = keyling.parse_lines(model, env_vars, env_var_key, allow_shell_calls=True)
+                    if not satisfied:
+                        print("not satisfied {}:".format(condition))
+                    all_satisfied.append(satisfied)
+                # A None means a condition / keyling script was not satisfied
+                # and did not return a dictionary
+                if not None in all_satisfied:
+                    print(all_satisfied)
 
-                # for now same settings on all discovered devices
-                # but addressing and setting devices conditionally should be possble
-                for device in devices:
+                    # settings could be a list of raw strings or a dictionary
+                    # or use a raw_ prefix on key to specify raw string to use set_raw()
+                    # settings = self.redis_conn.lrange(c.replace("pre", "set"), 0, -1)
+                    settings = self.redis_conn.hgetall(c.replace("pre", "set"))
+                    devices = slurp_thing.discover()
+                    # set settings
                     for setting, setting_value in settings.items():
                         print(device, setting)
-                        slurp_thing.set(device, setting, setting_value)
+                        slurp_thing.set_setting(device, setting, setting_value)
 
-                # slurp returns a list of keys for hashes
-                slurped = slurp_thing.slurp()
-                print(slurped)
-                post_conditions = self.redis_conn.lrange(c.replace("pre", "post"), 0, -1)
+                    # slurp returns a list of keys for hashes
+                    # for now this only calls slurp, but it may be useful
+                    # to make other calls such as adjusting servos for device positioning
+                    # or that could be done using shell calls at the tail of the preconditions
+                    slurped = slurp_thing.slurp()
+                    print(slurped)
+                    post_conditions = self.redis_conn.lrange(c.replace("pre", "post"), 0, -1)
 
-                # get hashes and feed them into post_conditions keyling scripts
-                for s in slurped:
-                    s_dict = self.redis_conn.hgetall(s)
-                    for post_condition in post_conditions:
-                        postmodel = keyling.model(post_condition)
-                        s_result = keyling.parse_lines(postmodel, s_dict, s, allow_shell_calls=True)
+                    # get hashes and feed them into post_conditions keyling scripts
+                    for s in slurped:
+                        s_dict = self.redis_conn.hgetall(s)
+                        for post_condition in post_conditions:
+                            postmodel = keyling.model(post_condition)
+                            s_result = keyling.parse_lines(postmodel, s_dict, s, allow_shell_calls=True)
 
     def neo_slurpst(self, context, state_template=None):
         # slurpstate
