@@ -54,6 +54,7 @@ class keli_neo(object):
         slurp_thing = sg.SlurpGphoto2(binary_r=self.binary_r, redis_conn=self.redis_conn)
         env_var_key = "machinic:env:{}:{}".format(self.db_host, self.db_port)
         env_vars = self.redis_conn.hgetall(env_var_key)
+        print("env vars:", env_vars)
         # conditional keys example
 
         # to make device-specific add device into key names
@@ -67,11 +68,16 @@ class keli_neo(object):
         # settings:post:foo:127.0.0.1:6379 #list of keyling scripts
         found_devices = slurp_thing.discover()
         devices = []
+        print("found devices", found_devices)
+        # use underscore to match all
+        if context["uuid"] == "_":
+            context["uuid"] = "*"
         # lookup and get device dict to pass to slurp
         for d in found_devices:
             if fnmatch.fnmatch(d["uid"], context["uuid"]):
                 devices.append(d)
 
+        print("using devices:", devices)
         for device in devices:
             pre_conditions = list(self.redis_conn.scan_iter(match="settings:pre:*:{}:{}:{}".format(device["uid"], self.db_host, self.db_port)))
             for c in pre_conditions:
