@@ -8,17 +8,11 @@ import redis
 import pathlib
 import os
 import fnmatch
+import importlib
+import importlib.util
+import inspect
 from ma_cli import data_models
 import fold_ui.keyling as keyling
-
-# slurp_gphoto2 is an edited version from machinic-image
-# machinic-image also has slurp_webcam and slurp_primitve_generic
-# may make sense to move slurp to a separate package / cli
-# use a more flexible approach to loading slurp_ prefixed files
-# to allo neo_slurpif and neo_slurp a wider range of discovery / slurping
-import keli.slurp_gphoto2 as sg
-import keli.slurp_webcam as sw
-
 
 class keli_neo(object):
 
@@ -32,15 +26,29 @@ class keli_neo(object):
 
         self.binary_r = redis.StrictRedis(host=r_ip, port=r_port)
         self.redis_conn = redis.StrictRedis(host=r_ip, port=r_port, decode_responses=True)
-        # default slurp_method is gphoto2
-        #   * gphoto2
-        #   * webcam
-        #   * lossyfile (files removed after slurping, needs dir)
-        self.slurp_classes = {
-            "default" :  sg.SlurpGphoto2,
-            "gphoto2" : sg.SlurpGphoto2,
-            "webcam" : sw.SlurpWebCam
-            }
+
+        # discover slurp_* files and load Slurp* classes
+        self.slurp_classes = {}
+        self.slurp_default_class  = "gphoto2"
+        package_path = pathlib.Path(pathlib.Path(__file__).parents[0])
+        if package_path.is_dir():
+            slurp_files = list(x for x in package_path.iterdir() if x.is_file() and "slurp_" in str(x))
+        for file in slurp_files:
+            # load modules using full path
+            spec = importlib.util.spec_from_file_location(pathlib.Path(file).stem, file)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            clsmembers = inspect.getmembers(module, inspect.isclass)
+            # create a dictionary of names that will be callable with
+            # the --slurp-method parameter
+            #
+            # ('SlurpGphoto2', <class 'slurp_gphoto2.SlurpGphoto2'>)
+            # will be used as
+            # {"gphoto2" : <class 'slurp_gphoto2.SlurpGphoto2'>}
+            #
+            self.slurp_classes.update({key.lower()[5:]: value for (key, value) in clsmembers if key.startswith("Slurp")})
+        # set a default if --slurp-method is not used
+        self.slurp_classes["default"] = self.slurp_classes[self.slurp_default_class]
 
     def neo_prune(self, context):
         #  context["uuid"] is a pattern glworb:*
