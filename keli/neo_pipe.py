@@ -17,6 +17,8 @@ import fold_ui.keyling as keyling
 # use a more flexible approach to loading slurp_ prefixed files
 # to allo neo_slurpif and neo_slurp a wider range of discovery / slurping
 import keli.slurp_gphoto2 as sg
+import keli.slurp_webcam as sw
+
 
 class keli_neo(object):
 
@@ -30,6 +32,15 @@ class keli_neo(object):
 
         self.binary_r = redis.StrictRedis(host=r_ip, port=r_port)
         self.redis_conn = redis.StrictRedis(host=r_ip, port=r_port, decode_responses=True)
+        # default slurp_method is gphoto2
+        #   * gphoto2
+        #   * webcam
+        #   * lossyfile (files removed after slurping, needs dir)
+        self.slurp_classes = {
+            "default" :  sg.SlurpGphoto2,
+            "gphoto2" : sg.SlurpGphoto2,
+            "webcam" : sw.SlurpWebCam
+            }
 
     def neo_prune(self, context):
         #  context["uuid"] is a pattern glworb:*
@@ -47,11 +58,18 @@ class keli_neo(object):
         for not_referenced in is_referenced:
             self.redis_conn.delete(not_referenced)
 
-    def neo_slurpif(self, context):
+    def neo_slurpif(self, context, **kwargs):
         # use context["uuid"] for device uid using pattern matching
         # for example "*" will match all devices
         # this is  messy since it expects keli_cli parsing behavior
-        slurp_thing = sg.SlurpGphoto2(binary_r=self.binary_r, redis_conn=self.redis_conn)
+        slurp_class = self.slurp_classes["default"]
+        if "slurp_method" in kwargs:
+            try:
+                slurp_class = self.slurp_classes[kwargs["slurp_method"]]
+            except KeyError as ex:
+                print(ex)
+        slurp_thing = slurp_class(binary_r=self.binary_r, redis_conn=self.redis_conn)
+
         env_var_key = "machinic:env:{}:{}".format(self.db_host, self.db_port)
         env_vars = self.redis_conn.hgetall(env_var_key)
         print("env vars:", env_vars)
@@ -119,12 +137,18 @@ class keli_neo(object):
                             postmodel = keyling.model(post_condition)
                             s_result = keyling.parse_lines(postmodel, s_dict, s, allow_shell_calls=True)
 
-    def neo_slurpst(self, context, state_template=None):
+    def neo_slurpst(self, context, state_template=None, **kwargs):
         # slurpstate
         # use context["uuid"] for device uid using pattern matching
         # for example "*" will match all devices
         # this is  messy since it expects keli_cli parsing behavior
-        slurp_thing = sg.SlurpGphoto2(binary_r=self.binary_r, redis_conn=self.redis_conn)
+        slurp_class = self.slurp_classes["default"]
+        if "slurp_method" in kwargs:
+            try:
+                slurp_class = self.slurp_classes[kwargs["slurp_method"]]
+            except KeyError as ex:
+                print(ex)
+        slurp_thing = slurp_class(binary_r=self.binary_r, redis_conn=self.redis_conn)
 
         found_devices = slurp_thing.discover()
         devices = []
@@ -150,10 +174,22 @@ class keli_neo(object):
 
             print("\n".join(slurp_thing.slurp()))
 
-    def neo_slurp(self, context):
-        s = sg.SlurpGphoto2(binary_r=self.binary_r, redis_conn=self.redis_conn)
-        print("\n".join(s.slurp()))
+    def neo_slurp(self, context, **kwargs):
+        slurp_class = self.slurp_classes["default"]
+        if "slurp_method" in kwargs:
+            try:
+                slurp_class = self.slurp_classes[kwargs["slurp_method"]]
+            except KeyError as ex:
+                print(ex)
+        slurp_thing = slurp_class(binary_r=self.binary_r, redis_conn=self.redis_conn)
+        print("\n".join(slurp_thing.slurp()))
 
-    def neo_discover(self, context):
-        s = sg.SlurpGphoto2(binary_r=self.binary_r, redis_conn=self.redis_conn)
-        print(s.discover())
+    def neo_discover(self, context, **kwargs):
+        slurp_class = self.slurp_classes["default"]
+        if "slurp_method" in kwargs:
+            try:
+                slurp_class = self.slurp_classes[kwargs["slurp_method"]]
+            except KeyError as ex:
+                print(ex)
+        slurp_thing = slurp_class(binary_r=self.binary_r, redis_conn=self.redis_conn)
+        print(slurp_thing.discover())
