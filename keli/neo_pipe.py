@@ -199,5 +199,13 @@ class keli_neo(object):
                 slurp_class = self.slurp_classes[kwargs["slurp_method"]]
             except KeyError as ex:
                 print(ex)
+
         slurp_thing = slurp_class(binary_r=self.binary_r, redis_conn=self.redis_conn)
         print(slurp_thing.discover())
+
+    def neo_discovery(self, context, **kwargs):
+        # runs discover on all slurp classes
+        for name, slurp_class in self.slurp_classes.items():
+            print("{}:".format(name))
+            slurp_thing = slurp_class(binary_r=self.binary_r, redis_conn=self.redis_conn)
+            print(slurp_thing.discover())
