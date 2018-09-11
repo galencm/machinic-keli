@@ -20,6 +20,7 @@ setup(
         "lings",
         "gphoto2",
         "fold_ui",
+        "pre-commit",
     ],
     dependency_links=[
         "https://github.com/galencm/ma-cli/tarball/master#egg=ma_cli-0.1",

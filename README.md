@@ -19,6 +19,14 @@ cd machinic-keli/
 pip3 install --editable ./ --user
 ```
 
+Setup linting and formatting git commit hooks:
+
+```
+cd machinic-keli/
+pre-commit install
+pre-commit install -t commit-msg
+```
+
 ## Contributing
 
 This project uses the C4 process 
