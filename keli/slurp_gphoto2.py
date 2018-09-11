@@ -16,16 +16,19 @@ from ma_cli import data_models
 # chdkptp needs to be installed/linked in a callable path
 # to set settings
 
+
 class SlurpGphoto2(object):
     def __init__(self, db_host=None, db_port=None, binary_r=None, redis_conn=None):
         if binary_r and redis_conn:
-             self.binary_r = binary_r
-             self.redis_conn = redis_conn
+            self.binary_r = binary_r
+            self.redis_conn = redis_conn
         else:
             if not db_host and not db_port:
-                db_host, db_port =  data_models.service_connection()
+                db_host, db_port = data_models.service_connection()
 
-            self.redis_conn = redis.StrictRedis(host=db_host, port=str(db_port),decode_responses=True)
+            self.redis_conn = redis.StrictRedis(
+                host=db_host, port=str(db_port), decode_responses=True
+            )
             self.binary_r = redis.StrictRedis(host=db_host, port=str(db_port))
 
     def discover(self):
@@ -39,21 +42,29 @@ class SlurpGphoto2(object):
                 camera = gp.Camera()
                 camera.init(c)
                 camera_summary = camera.get_summary(c)
-                serial =""
+                serial = ""
                 for t in str(camera_summary).split("\n"):
                     if ("Serial Number:") in t:
                         serial = t.partition(":")[-1].strip()
                         # print(serial)
                         break
                 camera.exit(c)
-                discoverable.append({'name':name,'address':addr,'uid':serial, 'discovery': method,'lastseen':now})
+                discoverable.append(
+                    {
+                        "name": name,
+                        "address": addr,
+                        "uid": serial,
+                        "discovery": method,
+                        "lastseen": now,
+                    }
+                )
 
         except Exception as ex:
             print(ex)
         return discoverable
 
     def slurp(self, device=None, container="glworb", metadata=None):
-        if device == '_':
+        if device == "_":
             device = None
 
         if device is None:
@@ -71,30 +82,30 @@ class SlurpGphoto2(object):
 
             # check using 'in' to allow combinations
             # for example: file+glworb
-            if 'file' in container:
+            if "file" in container:
                 fname = "/tmp/{}.slurp".format(time.time())
-                with open(fname,'wb+') as f:
+                with open(fname, "wb+") as f:
                     f.write(slurped_bytes)
                 slurped.append(fname)
 
-            if 'blob' in container:
+            if "blob" in container:
                 slurped.append(slurped_bytes)
 
-            if 'glworb' in container:
+            if "glworb" in container:
                 blob_uuid = str(uuid.uuid4())
-                blob_uuid = "binary:"+blob_uuid
+                blob_uuid = "binary:" + blob_uuid
                 self.binary_r.set(blob_uuid, slurped_bytes)
 
                 glworb = {}
-                glworb['uuid'] = str(uuid.uuid4())
-                glworb['slurp_source_uid'] = device['uid']
-                glworb['slurp_method'] = "slurp_gphoto2"
-                glworb['slurp_source_name'] =  device['name']
-                glworb['binary_key'] = blob_uuid
-                glworb['created'] = str(datetime.datetime.now())
+                glworb["uuid"] = str(uuid.uuid4())
+                glworb["slurp_source_uid"] = device["uid"]
+                glworb["slurp_method"] = "slurp_gphoto2"
+                glworb["slurp_source_name"] = device["name"]
+                glworb["binary_key"] = blob_uuid
+                glworb["created"] = str(datetime.datetime.now())
                 for k, v in metadata.items():
                     glworb[k] = v
-                glworb_uuid = "glworb:{}".format(glworb['uuid'])
+                glworb_uuid = "glworb:{}".format(glworb["uuid"])
                 self.redis_conn.hmset(glworb_uuid, glworb)
                 slurped.append(glworb_uuid)
 
@@ -119,58 +130,66 @@ class SlurpGphoto2(object):
         # chdkptp note:
         # do not set record mode if shooting with gphoto2
 
-        if not "scripts" in device:
-            device["scripts"] = self.redis_conn.hget("device:script_lookup", device["name"])
+        if "scripts" not in device:
+            device["scripts"] = self.redis_conn.hget(
+                "device:script_lookup", device["name"]
+            )
 
-        setting_call = self.redis_conn.hget("scripts:"+device["scripts"], setting).format_map({setting : setting_value})
+        setting_call = self.redis_conn.hget(
+            "scripts:" + device["scripts"], setting
+        ).format_map({setting: setting_value})
         print(setting_call)
 
         if dry_run is True:
             print(setting_call)
         else:
-            print(subprocess.check_output(['chdkptp',
-                                     '-c"-s={uid}"'.format_map(device),
-                                     setting_call
-                                    ]))
+            print(
+                subprocess.check_output(
+                    ["chdkptp", '-c"-s={uid}"'.format_map(device), setting_call]
+                )
+            )
 
     def set_raw(self, device, raw_string):
         # no formatting or lookups
-        subprocess.check_output(['chdkptp',
-                                 '-c"-s={uid}"'.format_map(device),
-                                 raw_string
-                                ])
+        subprocess.check_output(
+            ["chdkptp", '-c"-s={uid}"'.format_map(device), raw_string]
+        )
 
     def slurpd(self, device):
-        contents = b''
+        contents = b""
         try:
             context = gp.gp_context_new()
             camera = gp.Camera()
 
             cameras = gp.PortInfoList()
             cameras.load()
-            camera_address = cameras.lookup_path(device['address'])
+            camera_address = cameras.lookup_path(device["address"])
             camera.set_port_info(cameras[camera_address])
             gp.check_result(gp.gp_camera_init(camera, context))
 
-            captured = gp.check_result(gp.gp_camera_capture(
-                                                camera,
-                                                gp.GP_CAPTURE_IMAGE,
-                                                context))
+            captured = gp.check_result(
+                gp.gp_camera_capture(camera, gp.GP_CAPTURE_IMAGE, context)
+            )
 
-            captured_file = gp.check_result(gp.gp_camera_file_get(
-                                                camera,
-                                                captured.folder,
-                                                captured.name,
-                                                gp.GP_FILE_TYPE_NORMAL,
-                                                context))
+            captured_file = gp.check_result(
+                gp.gp_camera_file_get(
+                    camera,
+                    captured.folder,
+                    captured.name,
+                    gp.GP_FILE_TYPE_NORMAL,
+                    context,
+                )
+            )
 
-            captured_file_data = gp.check_result(gp.gp_file_get_data_and_size(captured_file))
+            captured_file_data = gp.check_result(
+                gp.gp_file_get_data_and_size(captured_file)
+            )
             container = io.BytesIO(memoryview(captured_file_data))
             container.seek(0)
             contents = container.read()
 
             gp.check_result(gp.gp_camera_exit(camera, context))
-       
+
         except Exception as ex:
             print(ex)
 

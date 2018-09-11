@@ -10,12 +10,13 @@ import keli.img_pipe
 import keli.src_pipe
 import keli.neo_pipe
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("command", help="command")
     parser.add_argument("key", nargs="?", default=None, help="db key")
     parser.add_argument("field", nargs="?", default=None, help="key field")
-    parser.add_argument("--db-host",  default="127.0.0.1", help="db host ip")
+    parser.add_argument("--db-host", default="127.0.0.1", help="db host ip")
     parser.add_argument("--db-port", default=None, help="db port")
     parser.add_argument("--verbose", action="store_true", help="")
     args, unknown_args = parser.parse_known_args()
@@ -24,23 +25,37 @@ def main():
     # unkown args assumed to be list of --key value pairs that will be
     # passed as kwargs to function
     unknown_args = dict(zip(unknown_args[:-1:2], unknown_args[1::2]))
-    unknown_args = {k.replace("--","").replace("-","_") :v for k, v in unknown_args.items()}
+    unknown_args = {
+        k.replace("--", "").replace("-", "_"): v for k, v in unknown_args.items()
+    }
     # try to convert values to int
     for k, v in unknown_args.items():
         try:
             unknown_args[k] = int(v)
-        except:
+        except Exception as ex:
             pass
 
     if args["command"] == "list":
         # list available commands
-        for c in [keli.img_pipe.keli_img, keli.src_pipe.keli_src, keli.neo_pipe.keli_neo]:
-            for method in [method[0] for method in inspect.getmembers(c(), predicate=inspect.ismethod) if not method[0].startswith("__")]:
+        for c in [
+            keli.img_pipe.keli_img,
+            keli.src_pipe.keli_src,
+            keli.neo_pipe.keli_neo,
+        ]:
+            for method in [
+                method[0]
+                for method in inspect.getmembers(c(), predicate=inspect.ismethod)
+                if not method[0].startswith("__")
+            ]:
                 print(method.replace("_", "-"))
-                #print(inspect.getargspec(getattr(img_pipe.keli_img, method)))
+                # print(inspect.getargspec(getattr(img_pipe.keli_img, method)))
     elif args["key"] is None and args["field"] is None:
         # show command signature
-        for c in [keli.img_pipe.keli_img, keli.src_pipe.keli_src, keli.neo_pipe.keli_neo]:
+        for c in [
+            keli.img_pipe.keli_img,
+            keli.src_pipe.keli_src,
+            keli.neo_pipe.keli_neo,
+        ]:
             try:
                 print(inspect.getargspec(getattr(c, args["command"].replace("-", "_"))))
             except AttributeError:
@@ -48,10 +63,19 @@ def main():
 
     else:
         # run command
-        for c in [keli.img_pipe.keli_img, keli.src_pipe.keli_src, keli.neo_pipe.keli_neo]:
+        for c in [
+            keli.img_pipe.keli_img,
+            keli.src_pipe.keli_src,
+            keli.neo_pipe.keli_neo,
+        ]:
             try:
-                getattr(c(db_host=args["db_host"], db_port=args["db_port"]), args["command"].replace("-", "_"))({"uuid" : args["key"], "key" : args["field"]}, **unknown_args)
+                getattr(
+                    c(db_host=args["db_host"], db_port=args["db_port"]),
+                    args["command"].replace("-", "_"),
+                )({"uuid": args["key"], "key": args["field"]}, **unknown_args)
             except AttributeError:
                 pass
+
+
 if __name__ == "__main__":
     main()
