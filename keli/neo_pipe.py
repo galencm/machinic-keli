@@ -14,8 +14,8 @@ import inspect
 from ma_cli import data_models
 import fold_ui.keyling as keyling
 
-class keli_neo(object):
 
+class keli_neo(object):
     def __init__(self, db_host=None, db_port=None):
         self.db_host = db_host
         self.db_port = db_port
@@ -25,14 +25,18 @@ class keli_neo(object):
             r_ip, r_port = db_host, db_port
 
         self.binary_r = redis.StrictRedis(host=r_ip, port=r_port)
-        self.redis_conn = redis.StrictRedis(host=r_ip, port=r_port, decode_responses=True)
+        self.redis_conn = redis.StrictRedis(
+            host=r_ip, port=r_port, decode_responses=True
+        )
 
         # discover slurp_* files and load Slurp* classes
         self.slurp_classes = {}
-        self.slurp_default_class  = "gphoto2"
+        self.slurp_default_class = "gphoto2"
         package_path = pathlib.Path(pathlib.Path(__file__).parents[0])
         if package_path.is_dir():
-            slurp_files = list(x for x in package_path.iterdir() if x.is_file() and "slurp_" in str(x))
+            slurp_files = list(
+                x for x in package_path.iterdir() if x.is_file() and "slurp_" in str(x)
+            )
         for file in slurp_files:
             # load modules using full path
             spec = importlib.util.spec_from_file_location(pathlib.Path(file).stem, file)
@@ -46,14 +50,20 @@ class keli_neo(object):
             # will be used as
             # {"gphoto2" : <class 'slurp_gphoto2.SlurpGphoto2'>}
             #
-            self.slurp_classes.update({key.lower()[5:]: value for (key, value) in clsmembers if key.startswith("Slurp")})
+            self.slurp_classes.update(
+                {
+                    key.lower()[5:]: value
+                    for (key, value) in clsmembers
+                    if key.startswith("Slurp")
+                }
+            )
         # set a default if --slurp-method is not used
         self.slurp_classes["default"] = self.slurp_classes[self.slurp_default_class]
 
     def neo_prune(self, context):
         #  context["uuid"] is a pattern glworb:*
         # context["key"] is a pattern binary:*
-        
+
         hashes = list(self.redis_conn.scan_iter(match=context["uuid"]))
         is_referenced = set(list(self.redis_conn.scan_iter(match=context["key"])))
 
@@ -105,13 +115,21 @@ class keli_neo(object):
 
         print("using devices:", devices)
         for device in devices:
-            pre_conditions = list(self.redis_conn.scan_iter(match="settings:pre:*:{}:{}:{}".format(device["uid"], self.db_host, self.db_port)))
+            pre_conditions = list(
+                self.redis_conn.scan_iter(
+                    match="settings:pre:*:{}:{}:{}".format(
+                        device["uid"], self.db_host, self.db_port
+                    )
+                )
+            )
             for c in pre_conditions:
                 conditions = self.redis_conn.lrange(c, 0, -1)
                 all_satisfied = []
                 for condition in conditions:
                     model = keyling.model(condition)
-                    satisfied = keyling.parse_lines(model, env_vars, env_var_key, allow_shell_calls=True)
+                    satisfied = keyling.parse_lines(
+                        model, env_vars, env_var_key, allow_shell_calls=True
+                    )
                     if not satisfied:
                         print("not satisfied {}:".format(condition))
                     all_satisfied.append(satisfied)
@@ -136,14 +154,18 @@ class keli_neo(object):
                     # or that could be done using shell calls at the tail of the preconditions
                     slurped = slurp_thing.slurp()
                     print(slurped)
-                    post_conditions = self.redis_conn.lrange(c.replace("pre", "post"), 0, -1)
+                    post_conditions = self.redis_conn.lrange(
+                        c.replace("pre", "post"), 0, -1
+                    )
 
                     # get hashes and feed them into post_conditions keyling scripts
                     for s in slurped:
                         s_dict = self.redis_conn.hgetall(s)
                         for post_condition in post_conditions:
                             postmodel = keyling.model(post_condition)
-                            s_result = keyling.parse_lines(postmodel, s_dict, s, allow_shell_calls=True)
+                            s_result = keyling.parse_lines(
+                                postmodel, s_dict, s, allow_shell_calls=True
+                            )
 
     def neo_slurpst(self, context, state_template=None, **kwargs):
         # slurpstate
@@ -207,5 +229,7 @@ class keli_neo(object):
         # runs discover on all slurp classes
         for name, slurp_class in self.slurp_classes.items():
             print("{}:".format(name))
-            slurp_thing = slurp_class(binary_r=self.binary_r, redis_conn=self.redis_conn)
+            slurp_thing = slurp_class(
+                binary_r=self.binary_r, redis_conn=self.redis_conn
+            )
             print(slurp_thing.discover())
