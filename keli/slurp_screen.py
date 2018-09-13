@@ -7,7 +7,6 @@ import subprocess
 # however, a more cross-window manager (and X/wayland) tool
 # would be better
 
-
 class SlurpScreenshot(SlurpThing):
     def __init__(self, **kwargs):
         super(SlurpScreenshot, self).__init__(**kwargs)
@@ -18,7 +17,6 @@ class SlurpScreenshot(SlurpThing):
         screenshot_file = "/tmp/{}".format(str(uuid.uuid4()))
         subprocess.call(["gnome-screenshot", "-f", screenshot_file])
         return self.file_bytes(screenshot_file)
-
 
 class SlurpScreenshotRegion(SlurpThing):
     def __init__(self, **kwargs):
@@ -31,7 +29,6 @@ class SlurpScreenshotRegion(SlurpThing):
         subprocess.call(["gnome-screenshot", "-a", "-f", screenshot_file])
         return self.file_bytes(screenshot_file)
 
-
 class SlurpScreenshotWindow(SlurpThing):
     def __init__(self, **kwargs):
         super(SlurpScreenshotWindow, self).__init__(**kwargs)
@@ -43,7 +40,6 @@ class SlurpScreenshotWindow(SlurpThing):
         # delay for 5 seconds to allow window to be selected
         subprocess.call(["gnome-screenshot", "-w", "-d", "5", "-f", screenshot_file])
         return self.file_bytes(screenshot_file)
-
 
 class SlurpScreenshotAnimated(SlurpThing):
     def __init__(self, **kwargs):
