@@ -12,7 +12,6 @@ import sys
 import time
 import subprocess
 import fnmatch
-import datetime
 import glob
 from ma_cli import data_models
 
@@ -169,7 +168,7 @@ class SlurpWebCam(object):
         try:
             tmp_output_filename = "/tmp/slurp_webcam.jpg"
             print(device)
-            name = device["name"]
+            # name = device["name"]
             addr = device["address"]
             subprocess.call(
                 [

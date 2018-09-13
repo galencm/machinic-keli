@@ -130,7 +130,7 @@ class SlurpGphoto2(object):
         # chdkptp note:
         # do not set record mode if shooting with gphoto2
 
-        if not "scripts" in device:
+        if "scripts" not in device:
             device["scripts"] = self.redis_conn.hget(
                 "device:script_lookup", device["name"]
             )

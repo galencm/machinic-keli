@@ -106,7 +106,7 @@ class keli_img(object):
             try:
                 font = ImageFont.truetype("FreeSerif.ttf", fontsize)
                 draw.text((x, y), text, (255, 255, 255), font=font)
-            except:
+            except Exception as ex:
                 font = ImageFont.truetype(
                     "/usr/share/fonts/truetype/freefont/FreeSerif.ttf", fontsize
                 )
@@ -259,7 +259,7 @@ class keli_img(object):
             Returns:
                 dict:
         """
-        if not "binary_prefix" in context:
+        if "binary_prefix" not in context:
             context["binary_prefix"] = "binary:"
 
         x1 = float(x1)

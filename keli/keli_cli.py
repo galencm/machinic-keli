@@ -32,7 +32,7 @@ def main():
     for k, v in unknown_args.items():
         try:
             unknown_args[k] = int(v)
-        except:
+        except Exception as ex:
             pass
 
     if args["command"] == "list":

@@ -94,7 +94,7 @@ class SlurpThing(object):
                 try:
                     glworb["slurp_source_uid"] = device["uid"]
                     glworb["slurp_source_name"] = device["name"]
-                except:
+                except Exception as ex:
                     pass
                 for k, v in metadata.items():
                     glworb[k] = v
@@ -105,7 +105,7 @@ class SlurpThing(object):
         return slurped
 
     def set_setting(self, device, setting, setting_value, dry_run=False):
-        if not "scripts" in device:
+        if "scripts" not in device:
             device["scripts"] = self.redis_conn.hget(
                 "device:script_lookup", device["name"]
             )

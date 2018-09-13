@@ -135,7 +135,7 @@ class keli_neo(object):
                     all_satisfied.append(satisfied)
                 # A None means a condition / keyling script was not satisfied
                 # and did not return a dictionary
-                if not None in all_satisfied:
+                if None not in all_satisfied:
                     print(all_satisfied)
 
                     # settings could be a list of raw strings or a dictionary
@@ -166,6 +166,7 @@ class keli_neo(object):
                             s_result = keyling.parse_lines(
                                 postmodel, s_dict, s, allow_shell_calls=True
                             )
+                            print(s_result)
 
     def neo_slurpst(self, context, state_template=None, **kwargs):
         # slurpstate
