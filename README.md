@@ -29,10 +29,7 @@ pre-commit install -t commit-msg
 
 ## Contributing
 
-This project uses the C4 process 
-
-[https://rfc.zeromq.org/spec:42/C4/](https://rfc.zeromq.org/spec:42/C4/
-)
+[Contribution guidelines](CONTRIBUTING.md)
 
 ## License
 
